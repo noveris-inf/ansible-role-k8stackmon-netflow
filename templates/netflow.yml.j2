@@ -1,0 +1,55 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netflow-ds
+  namespace: {{ netflow_namespace }}
+  labels:
+    app: netflow-app
+spec:
+  selector:
+    matchLabels:
+      app: netflow-app
+  template:
+    metadata:
+      namespace: {{ netflow_namespace }}
+      annotations:
+        triggerHash: "{{ trigger_sha_sum['stat']['checksum'] }}"
+      labels:
+        app: netflow-app
+    spec:
+{% if netflow_tolerate_master | default(false) %}
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+{% endif %}
+      volumes:
+        - name: netflow-cert
+          secret:
+            secretName: netflow-cert
+        - name: netflow-filebeat-config
+          configMap:
+            name: netflow-filebeat-config
+      containers:
+        - name: netflow
+          image: {{ netflow_image_ref }}
+          volumeMounts:
+            - name: netflow-filebeat-config
+              mountPath: /usr/share/filebeat/filebeat.yml
+              subPath: filebeat.yml
+            - name: netflow-cert
+              mountPath: /usr/share/filebeat/certs/
+          env:
+            - name: SYSLOG_ELASTIC_USER
+              valueFrom:
+                secretKeyRef:
+                  name: netflow-elastic-cred
+                  key: user
+            - name: SYSLOG_ELASTIC_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: netflow-elastic-cred
+                  key: pass
+          ports:
+            - { name: "udp-2055", protocol: UDP, containerPort: 2055, hostPort: 2055 }

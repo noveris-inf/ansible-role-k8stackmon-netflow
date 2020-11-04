@@ -1,0 +1,11 @@
+---
+
+netflow_namespace: "{{ kubernetes_namespace | default('default') }}"
+netflow_config_dir: "{{ kubernetes_namespace_dir }}/netflow"
+netflow_tolerate_master: false
+netflow_image_ref: "docker.elastic.co/beats/filebeat:7.9.0"
+#netflow_ca_file:
+#netflow_elastic_user:
+#netflow_elastic_pass:
+
+...

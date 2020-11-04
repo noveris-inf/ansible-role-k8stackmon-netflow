@@ -1,0 +1,44 @@
+---
+
+- name: Create netflow config directory
+  command: "mkdir -p {{ netflow_config_dir }}"
+
+- name: netflow location
+  file:
+    state: directory
+    path: "{{ netflow_config_dir }}"
+    owner: "root"
+    group: "root"
+    mode: 0755
+
+- name: Read CA file
+  slurp:
+    src: "{{ netflow_ca_file }}"
+  register: netflow_ca_data
+
+- name: Copy netflow triggers
+  template:
+    src: netflow_triggers.yml.j2
+    dest: "{{ netflow_config_dir }}/netflow_triggers.yml"
+    owner: root
+    group: root
+    mode: 0640
+
+- name: Get trigger SHA sum
+  stat:
+    checksum_algorithm: sha256
+    path: "{{ netflow_config_dir }}/netflow_triggers.yml"
+  register: trigger_sha_sum
+
+- name: Copy netflow config
+  template:
+    src: netflow.yml.j2
+    dest: "{{ netflow_config_dir }}/netflow.yml"
+    owner: root
+    group: root
+    mode: 0640
+
+- name: Apply netflow resources
+  command: "kubectl apply -f {{ netflow_config_dir }}/netflow_triggers.yml -f {{ netflow_config_dir }}/netflow.yml"
+
+...
